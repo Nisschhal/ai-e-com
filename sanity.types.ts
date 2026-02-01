@@ -364,7 +364,7 @@ export type ORDER_BY_STRIPE_PAYMENT_ID_QUERYResult = {
 
 // Source: ./sanity/queries/products.ts
 // Variable: ALL_PRODUCTS_QUERY
-// Query: *[ _type == "product" ] | order(name asc) {  _id, name, "slug": slug.current, description, price,  "images": images[]{ _key, asset->{ _id, url }, hotspot },  category->{ _id, title, "slug": slug.current },  material, color, dimensions, stock, featured, assemblyRequired}
+// Query: *[  _type == "product"                    // 1. FILTER: only product documents] | order(name asc) {                   // 2. SORT: alphabetical by name  _id,  name,  "slug": slug.current,                 // 3. Rename: make slug a clean string  description,  price,  "images": images[]{                   // 4. ALL images (no limit)    _key,    asset->{ _id, url },    hotspot  },  category->{                           // 5. Expand category reference    _id, title, "slug": slug.current  },  material, color, dimensions,  stock, featured, assemblyRequired}
 export type ALL_PRODUCTS_QUERYResult = Array<{
   _id: string;
   name: string | null;
@@ -392,11 +392,12 @@ export type ALL_PRODUCTS_QUERYResult = Array<{
   assemblyRequired: boolean | null;
 }>;
 // Variable: FEATURED_PRODUCTS_QUERY
-// Query: *[  _type == "product" && featured == true && stock > 0] | order(name asc) [0...6] {  _id, name, "slug": slug.current, price,  "images": images[]{ _key, asset->{ _id, url }, hotspot },  category->{ _id, title, "slug": slug.current },  stock}
+// Query: *[  _type == "product"                    // 1. Base type filter  && featured == true                   // 2. Must be marked featured  && stock > 0                          // 3. Must be in stock] | order(name asc) [0...6] {           // 4. Sort A-Z → take first 6 (exclusive)  _id, name, "slug": slug.current,  description, price,  "images": images[]{ _key, asset->{ _id, url }, hotspot },  category->{ _id, title, "slug": slug.current },  stock}
 export type FEATURED_PRODUCTS_QUERYResult = Array<{
   _id: string;
   name: string | null;
   slug: string | null;
+  description: string | null;
   price: number | null;
   images: Array<{
     _key: string;
@@ -413,8 +414,31 @@ export type FEATURED_PRODUCTS_QUERYResult = Array<{
   } | null;
   stock: number | null;
 }>;
+// Variable: PRODUCTS_BY_CATEGORY_QUERY
+// Query: *[  _type == "product"                    // 1. Base filter  && category->slug.current == $categorySlug   // 2. Exact category match] | order(name asc) {                   // 3. SORT: alphabetical  _id, name, "slug": slug.current,  price,  "image": images[0]{                   // 4. Only first image    asset->{ _id, url }, hotspot  },  category->{ _id, title, "slug": slug.current },  material, color, stock}
+export type PRODUCTS_BY_CATEGORY_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  price: number | null;
+  image: {
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+    hotspot: SanityImageHotspot | null;
+  } | null;
+  category: {
+    _id: string;
+    title: string | null;
+    slug: string | null;
+  } | null;
+  material: "fabric" | "glass" | "leather" | "metal" | "wood" | null;
+  color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
+  stock: number | null;
+}>;
 // Variable: PRODUCT_BY_SLUG_QUERY
-// Query: *[  _type == "product" && slug.current == $slug][0] {  _id, name, "slug": slug.current, description, price,  "images": images[]{ _key, asset->{ _id, url }, hotspot },  category->{ _id, title, "slug": slug.current },  material, color, dimensions, stock, featured, assemblyRequired}
+// Query: *[  _type == "product"                    // 1. FILTER: only products  && slug.current == $slug              // 2. MATCH: exact slug from URL][0] {                                  // 3. SELECT: first (and only) result as object  _id, name, "slug": slug.current,  description, price,  "images": images[]{                   // 4. ARRAY: all images for gallery    _key,    asset->{ _id, url },    hotspot  },  category->{                           // 5. JOIN: full category data    _id, title, "slug": slug.current  },  material, color, dimensions,  stock, featured, assemblyRequired}
 export type PRODUCT_BY_SLUG_QUERYResult = {
   _id: string;
   name: string | null;
@@ -441,8 +465,32 @@ export type PRODUCT_BY_SLUG_QUERYResult = {
   featured: boolean | null;
   assemblyRequired: boolean | null;
 } | null;
+// Variable: SEARCH_PRODUCTS_QUERY
+// Query: *[  _type == "product"  && (                                  // 1. Must match name OR description    name match $searchQuery + "*"    || description match $searchQuery + "*"  )] | score(                               // 2. Calculate relevance  boost(name match $searchQuery + "*", 3),  boost(description match $searchQuery + "*", 1)) | order(_score desc) {                // 3. Best match first  _id, _score,                          // 4. Include score in result  name, "slug": slug.current,  price,  "image": images[0]{ asset->{ _id, url }, hotspot },  category->{ _id, title, "slug": slug.current },  material, color, stock}
+export type SEARCH_PRODUCTS_QUERYResult = Array<{
+  _id: string;
+  _score: null;
+  name: string | null;
+  slug: string | null;
+  price: number | null;
+  image: {
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+    hotspot: SanityImageHotspot | null;
+  } | null;
+  category: {
+    _id: string;
+    title: string | null;
+    slug: string | null;
+  } | null;
+  material: "fabric" | "glass" | "leather" | "metal" | "wood" | null;
+  color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
+  stock: number | null;
+}>;
 // Variable: FILTER_PRODUCTS_BY_NAME_QUERY
-// Query: *[  _type == "product"  && ($categorySlug == "" || category->slug.current == $categorySlug)  && ($color == "" || color == $color)  && ($material == "" || material == $material)  && ($minPrice == 0 || price >= $minPrice)  && ($maxPrice == 0 || price <= $maxPrice)  && ($searchQuery == "" || name match $searchQuery + "*" || description match $searchQuery + "*")  && ($inStock == false || stock > 0)] | order(name asc) {  _id,  name,  "slug": slug.current,  price,  "images": images[0...4]{    _key,    asset->{ _id, url }  },  category->{ _id, title, "slug": slug.current },  material,  color,  stock}
+// Query: *[  _type == "product"                                                      // 1. BASE FILTER: only products  && ($categorySlug == "" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category  && ($color == ""        || color == $color)                             // 3. OPTIONAL: color  && ($material == ""     || material == $material)                       // 4. OPTIONAL: material  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)  && ($searchQuery == ""  || name match $searchQuery + "*" || description match $searchQuery + "*")  // 7. OPTIONAL: search  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only]        // 1. Apply all optional filters  | order(name asc)                       // 2. SORT: alphabetical  {  _id,  name,  "slug": slug.current,  price,  "images": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)    _key,                            // 2. Needed for React list rendering    asset->{ _id, url }              // 3. Dereference to get real image URL  },  category->{                        // 4. Expand category reference    _id, title, "slug": slug.current  },  material,  color,  stock}
 export type FILTER_PRODUCTS_BY_NAME_QUERYResult = Array<{
   _id: string;
   name: string | null;
@@ -464,8 +512,54 @@ export type FILTER_PRODUCTS_BY_NAME_QUERYResult = Array<{
   color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
   stock: number | null;
 }>;
+// Variable: FILTER_PRODUCTS_BY_PRICE_ASC_QUERY
+// Query: *[  _type == "product"                                                      // 1. BASE FILTER: only products  && ($categorySlug == "" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category  && ($color == ""        || color == $color)                             // 3. OPTIONAL: color  && ($material == ""     || material == $material)                       // 4. OPTIONAL: material  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)  && ($searchQuery == ""  || name match $searchQuery + "*" || description match $searchQuery + "*")  // 7. OPTIONAL: search  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only]               // 1. All optional filters (category, color, price range, search, stock…)  | order(price asc)                        // 2. SORT: lowest price first (ascending)  {  _id,  name,  "slug": slug.current,  price,  "images": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)    _key,                            // 2. Needed for React list rendering    asset->{ _id, url }              // 3. Dereference to get real image URL  },  category->{                        // 4. Expand category reference    _id, title, "slug": slug.current  },  material,  color,  stock}
+export type FILTER_PRODUCTS_BY_PRICE_ASC_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  price: number | null;
+  images: Array<{
+    _key: string;
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+  }> | null;
+  category: {
+    _id: string;
+    title: string | null;
+    slug: string | null;
+  } | null;
+  material: "fabric" | "glass" | "leather" | "metal" | "wood" | null;
+  color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
+  stock: number | null;
+}>;
+// Variable: FILTER_PRODUCTS_BY_PRICE_DESC_QUERY
+// Query: *[  _type == "product"                                                      // 1. BASE FILTER: only products  && ($categorySlug == "" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category  && ($color == ""        || color == $color)                             // 3. OPTIONAL: color  && ($material == ""     || material == $material)                       // 4. OPTIONAL: material  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)  && ($searchQuery == ""  || name match $searchQuery + "*" || description match $searchQuery + "*")  // 7. OPTIONAL: search  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only]               // 1. Same optional filters  | order(price desc)                       // 2. SORT: highest price first (descending)  {  _id,  name,  "slug": slug.current,  price,  "images": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)    _key,                            // 2. Needed for React list rendering    asset->{ _id, url }              // 3. Dereference to get real image URL  },  category->{                        // 4. Expand category reference    _id, title, "slug": slug.current  },  material,  color,  stock}
+export type FILTER_PRODUCTS_BY_PRICE_DESC_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  price: number | null;
+  images: Array<{
+    _key: string;
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+  }> | null;
+  category: {
+    _id: string;
+    title: string | null;
+    slug: string | null;
+  } | null;
+  material: "fabric" | "glass" | "leather" | "metal" | "wood" | null;
+  color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
+  stock: number | null;
+}>;
 // Variable: FILTER_PRODUCTS_BY_RELEVANCE_QUERY
-// Query: *[  _type == "product"  && ($categorySlug == "" || category->slug.current == $categorySlug)  && ($color == "" || color == $color)  && ($material == "" || material == $material)  && ($minPrice == 0 || price >= $minPrice)  && ($maxPrice == 0 || price <= $maxPrice)  && ($searchQuery == "" || name match $searchQuery + "*" || description match $searchQuery + "*")  && ($inStock == false || stock > 0)] | score(  boost(name match $searchQuery + "*", 3),  boost(description match $searchQuery + "*", 1)) | order(_score desc, name asc) {  _id,  name,  "slug": slug.current,  price,  "images": images[0...4]{    _key,    asset->{ _id, url }  },  category->{ _id, title, "slug": slug.current },  material,  color,  stock}
+// Query: *[  _type == "product"                                                      // 1. BASE FILTER: only products  && ($categorySlug == "" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category  && ($color == ""        || color == $color)                             // 3. OPTIONAL: color  && ($material == ""     || material == $material)                       // 4. OPTIONAL: material  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)  && ($searchQuery == ""  || name match $searchQuery + "*" || description match $searchQuery + "*")  // 7. OPTIONAL: search  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only]               // 1. All optional filters still apply  | score(  boost(name match $searchQuery + "*", 3),        // Title = very important  boost(description match $searchQuery + "*", 1)  // Description = secondary)                      // 2. Compute relevance score                                            //    → title matches 3× stronger                                            //    → _score added automatically (runtime)  | order(_score desc, name asc)            // 3. Best score first → then A-Z on ties  {  _id,  name,  "slug": slug.current,  price,  "images": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)    _key,                            // 2. Needed for React list rendering    asset->{ _id, url }              // 3. Dereference to get real image URL  },  category->{                        // 4. Expand category reference    _id, title, "slug": slug.current  },  material,  color,  stock}
 export type FILTER_PRODUCTS_BY_RELEVANCE_QUERYResult = Array<{
   _id: string;
   name: string | null;
@@ -487,8 +581,24 @@ export type FILTER_PRODUCTS_BY_RELEVANCE_QUERYResult = Array<{
   color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
   stock: number | null;
 }>;
+// Variable: PRODUCTS_BY_IDS_QUERY
+// Query: *[  _type == "product"  && _id in $ids                        // 1. Match any ID in array] {  _id, name, "slug": slug.current,  price,  "image": images[0]{ asset->{ _id, url }, hotspot },  stock                                 // 2. Critical for availability check}
+export type PRODUCTS_BY_IDS_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  price: number | null;
+  image: {
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+    hotspot: SanityImageHotspot | null;
+  } | null;
+  stock: number | null;
+}>;
 // Variable: LOW_STOCK_PRODUCTS_QUERY
-// Query: *[  _type == "product" && stock > 0 && stock <= 5] | order(stock asc) {  _id, name, "slug": slug.current, stock,  "image": images[0]{ asset->{ _id, url } }}
+// Query: *[  _type == "product"                    // 1. Base filter  && stock > 0                          // 2. Still available  && stock <= 5    // 3. Below threshold (e.g. 5)] | order(stock asc) {                  // 4. SORT: lowest stock first  _id, name, "slug": slug.current,  stock,  "image": images[0]{                   // 5. Only first image    asset->{ _id, url }  }}
 export type LOW_STOCK_PRODUCTS_QUERYResult = Array<{
   _id: string;
   name: string | null;
@@ -500,6 +610,45 @@ export type LOW_STOCK_PRODUCTS_QUERYResult = Array<{
       url: string | null;
     } | null;
   } | null;
+}>;
+// Variable: OUT_OF_STOCK_PRODUCTS_QUERY
+// Query: *[  _type == "product"  && stock == 0                         // 1. Only out-of-stock] | order(name asc) {                   // 2. SORT: A-Z  _id, name, "slug": slug.current,  "image": images[0]{ asset->{ _id, url } }}
+export type OUT_OF_STOCK_PRODUCTS_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  image: {
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+  } | null;
+}>;
+// Variable: AI_SEARCH_PRODUCTS_QUERY
+// Query: *[  _type == "product"                    // 1. Base filter  && (                                  // 2. Broad search condition    $searchQuery == ""                  //   - no query = return all    || name match $searchQuery + "*"    || description match $searchQuery + "*"    || category->title match $searchQuery + "*"  // extra: category names  )  && ($categorySlug == "" || category->slug.current == $categorySlug)  && ($material == "" || material == $material)  && ($color == "" || color == $color)  && ($minPrice == 0 || price >= $minPrice)  && ($maxPrice == 0 || price <= $maxPrice)] | order(name asc) [0...20] {           // 3. SORT A-Z + limit to 20  _id, name, "slug": slug.current,  description, price,  "image": images[0]{ asset->{ _id, url } },  category->{ _id, title, "slug": slug.current },  material, color, dimensions,  stock, featured, assemblyRequired}
+export type AI_SEARCH_PRODUCTS_QUERYResult = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  description: string | null;
+  price: number | null;
+  image: {
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
+  } | null;
+  category: {
+    _id: string;
+    title: string | null;
+    slug: string | null;
+  } | null;
+  material: "fabric" | "glass" | "leather" | "metal" | "wood" | null;
+  color: "black" | "grey" | "natural" | "oak" | "walnut" | "white" | null;
+  dimensions: string | null;
+  stock: number | null;
+  featured: boolean | null;
+  assemblyRequired: boolean | null;
 }>;
 
 // Source: ./sanity/queries/stats.ts
@@ -557,12 +706,19 @@ declare module "@sanity/client" {
     "*[\n  _type == \"order\"\n  && _id == $id\n][0] {\n  _id,\n  orderNumber,\n  clerkUserId,\n  email,\n  items[]{\n    _key,\n    quantity,\n    priceAtPurchase,\n    product->{\n      _id,\n      name,\n      \"slug\": slug.current,\n      \"image\": images[0]{\n        asset->{\n          _id,\n          url\n        }\n      }\n    }\n  },\n  total,\n  status,\n  address{\n    name,\n    line1,\n    line2,\n    city,\n    postcode,\n    country\n  },\n  stripePaymentId,\n  createdAt\n}": ORDER_BY_ID_QUERYResult;
     "*[\n  _type == \"order\"\n] | order(createdAt desc) [0...$limit] {\n  _id,\n  orderNumber,\n  email,\n  total,\n  status,\n  createdAt\n}": RECENT_ORDERS_QUERYResult;
     "*[\n  _type == \"order\"\n  && stripePaymentId == $stripePaymentId\n][0]{ _id }": ORDER_BY_STRIPE_PAYMENT_ID_QUERYResult;
-    "*[ _type == \"product\" ] | order(name asc) {\n  _id, name, \"slug\": slug.current, description, price,\n  \"images\": images[]{ _key, asset->{ _id, url }, hotspot },\n  category->{ _id, title, \"slug\": slug.current },\n  material, color, dimensions, stock, featured, assemblyRequired\n}": ALL_PRODUCTS_QUERYResult;
-    "*[\n  _type == \"product\" && featured == true && stock > 0\n] | order(name asc) [0...6] {\n  _id, name, \"slug\": slug.current, price,\n  \"images\": images[]{ _key, asset->{ _id, url }, hotspot },\n  category->{ _id, title, \"slug\": slug.current },\n  stock\n}": FEATURED_PRODUCTS_QUERYResult;
-    "*[\n  _type == \"product\" && slug.current == $slug\n][0] {\n  _id, name, \"slug\": slug.current, description, price,\n  \"images\": images[]{ _key, asset->{ _id, url }, hotspot },\n  category->{ _id, title, \"slug\": slug.current },\n  material, color, dimensions, stock, featured, assemblyRequired\n}": PRODUCT_BY_SLUG_QUERYResult;
-    "*[\n  _type == \"product\"\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)\n  && ($color == \"\" || color == $color)\n  && ($material == \"\" || material == $material)\n  && ($minPrice == 0 || price >= $minPrice)\n  && ($maxPrice == 0 || price <= $maxPrice)\n  && ($searchQuery == \"\" || name match $searchQuery + \"*\" || description match $searchQuery + \"*\")\n  && ($inStock == false || stock > 0)\n] | order(name asc) {\n  _id,\n  name,\n  \"slug\": slug.current,\n  price,\n  \"images\": images[0...4]{\n    _key,\n    asset->{ _id, url }\n  },\n  category->{ _id, title, \"slug\": slug.current },\n  material,\n  color,\n  stock\n}": FILTER_PRODUCTS_BY_NAME_QUERYResult;
-    "*[\n  _type == \"product\"\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)\n  && ($color == \"\" || color == $color)\n  && ($material == \"\" || material == $material)\n  && ($minPrice == 0 || price >= $minPrice)\n  && ($maxPrice == 0 || price <= $maxPrice)\n  && ($searchQuery == \"\" || name match $searchQuery + \"*\" || description match $searchQuery + \"*\")\n  && ($inStock == false || stock > 0)\n] | score(\n  boost(name match $searchQuery + \"*\", 3),\n  boost(description match $searchQuery + \"*\", 1)\n) | order(_score desc, name asc) {\n  _id,\n  name,\n  \"slug\": slug.current,\n  price,\n  \"images\": images[0...4]{\n    _key,\n    asset->{ _id, url }\n  },\n  category->{ _id, title, \"slug\": slug.current },\n  material,\n  color,\n  stock\n}": FILTER_PRODUCTS_BY_RELEVANCE_QUERYResult;
-    "*[\n  _type == \"product\" && stock > 0 && stock <= 5\n] | order(stock asc) {\n  _id, name, \"slug\": slug.current, stock,\n  \"image\": images[0]{ asset->{ _id, url } }\n}": LOW_STOCK_PRODUCTS_QUERYResult;
+    "*[\n  _type == \"product\"                    // 1. FILTER: only product documents\n] | order(name asc) {                   // 2. SORT: alphabetical by name\n  _id,\n  name,\n  \"slug\": slug.current,                 // 3. Rename: make slug a clean string\n  description,\n  price,\n  \"images\": images[]{                   // 4. ALL images (no limit)\n    _key,\n    asset->{ _id, url },\n    hotspot\n  },\n  category->{                           // 5. Expand category reference\n    _id, title, \"slug\": slug.current\n  },\n  material, color, dimensions,\n  stock, featured, assemblyRequired\n}": ALL_PRODUCTS_QUERYResult;
+    "*[\n  _type == \"product\"                    // 1. Base type filter\n  && featured == true                   // 2. Must be marked featured\n  && stock > 0                          // 3. Must be in stock\n] | order(name asc) [0...6] {           // 4. Sort A-Z \u2192 take first 6 (exclusive)\n  _id, name, \"slug\": slug.current,\n  description, price,\n  \"images\": images[]{ _key, asset->{ _id, url }, hotspot },\n  category->{ _id, title, \"slug\": slug.current },\n  stock\n}": FEATURED_PRODUCTS_QUERYResult;
+    "*[\n  _type == \"product\"                    // 1. Base filter\n  && category->slug.current == $categorySlug   // 2. Exact category match\n] | order(name asc) {                   // 3. SORT: alphabetical\n  _id, name, \"slug\": slug.current,\n  price,\n  \"image\": images[0]{                   // 4. Only first image\n    asset->{ _id, url }, hotspot\n  },\n  category->{ _id, title, \"slug\": slug.current },\n  material, color, stock\n}": PRODUCTS_BY_CATEGORY_QUERYResult;
+    "*[\n  _type == \"product\"                    // 1. FILTER: only products\n  && slug.current == $slug              // 2. MATCH: exact slug from URL\n][0] {                                  // 3. SELECT: first (and only) result as object\n  _id, name, \"slug\": slug.current,\n  description, price,\n  \"images\": images[]{                   // 4. ARRAY: all images for gallery\n    _key,\n    asset->{ _id, url },\n    hotspot\n  },\n  category->{                           // 5. JOIN: full category data\n    _id, title, \"slug\": slug.current\n  },\n  material, color, dimensions,\n  stock, featured, assemblyRequired\n}": PRODUCT_BY_SLUG_QUERYResult;
+    "*[\n  _type == \"product\"\n  && (                                  // 1. Must match name OR description\n    name match $searchQuery + \"*\"\n    || description match $searchQuery + \"*\"\n  )\n] | score(                               // 2. Calculate relevance\n  boost(name match $searchQuery + \"*\", 3),\n  boost(description match $searchQuery + \"*\", 1)\n) | order(_score desc) {                // 3. Best match first\n  _id, _score,                          // 4. Include score in result\n  name, \"slug\": slug.current,\n  price,\n  \"image\": images[0]{ asset->{ _id, url }, hotspot },\n  category->{ _id, title, \"slug\": slug.current },\n  material, color, stock\n}": SEARCH_PRODUCTS_QUERYResult;
+    "*[\n  _type == \"product\"                                                      // 1. BASE FILTER: only products\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category\n  && ($color == \"\"        || color == $color)                             // 3. OPTIONAL: color\n  && ($material == \"\"     || material == $material)                       // 4. OPTIONAL: material\n  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)\n  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)\n  && ($searchQuery == \"\"  || name match $searchQuery + \"*\" || description match $searchQuery + \"*\")  // 7. OPTIONAL: search\n  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only\n]        // 1. Apply all optional filters\n  | order(name asc)                       // 2. SORT: alphabetical\n  {\n  _id,\n  name,\n  \"slug\": slug.current,\n  price,\n  \"images\": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)\n    _key,                            // 2. Needed for React list rendering\n    asset->{ _id, url }              // 3. Dereference to get real image URL\n  },\n  category->{                        // 4. Expand category reference\n    _id, title, \"slug\": slug.current\n  },\n  material,\n  color,\n  stock\n}": FILTER_PRODUCTS_BY_NAME_QUERYResult;
+    "*[\n  _type == \"product\"                                                      // 1. BASE FILTER: only products\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category\n  && ($color == \"\"        || color == $color)                             // 3. OPTIONAL: color\n  && ($material == \"\"     || material == $material)                       // 4. OPTIONAL: material\n  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)\n  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)\n  && ($searchQuery == \"\"  || name match $searchQuery + \"*\" || description match $searchQuery + \"*\")  // 7. OPTIONAL: search\n  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only\n]               // 1. All optional filters (category, color, price range, search, stock\u2026)\n  | order(price asc)                        // 2. SORT: lowest price first (ascending)\n  {\n  _id,\n  name,\n  \"slug\": slug.current,\n  price,\n  \"images\": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)\n    _key,                            // 2. Needed for React list rendering\n    asset->{ _id, url }              // 3. Dereference to get real image URL\n  },\n  category->{                        // 4. Expand category reference\n    _id, title, \"slug\": slug.current\n  },\n  material,\n  color,\n  stock\n}": FILTER_PRODUCTS_BY_PRICE_ASC_QUERYResult;
+    "*[\n  _type == \"product\"                                                      // 1. BASE FILTER: only products\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category\n  && ($color == \"\"        || color == $color)                             // 3. OPTIONAL: color\n  && ($material == \"\"     || material == $material)                       // 4. OPTIONAL: material\n  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)\n  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)\n  && ($searchQuery == \"\"  || name match $searchQuery + \"*\" || description match $searchQuery + \"*\")  // 7. OPTIONAL: search\n  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only\n]               // 1. Same optional filters\n  | order(price desc)                       // 2. SORT: highest price first (descending)\n  {\n  _id,\n  name,\n  \"slug\": slug.current,\n  price,\n  \"images\": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)\n    _key,                            // 2. Needed for React list rendering\n    asset->{ _id, url }              // 3. Dereference to get real image URL\n  },\n  category->{                        // 4. Expand category reference\n    _id, title, \"slug\": slug.current\n  },\n  material,\n  color,\n  stock\n}": FILTER_PRODUCTS_BY_PRICE_DESC_QUERYResult;
+    "*[\n  _type == \"product\"                                                      // 1. BASE FILTER: only products\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)     // 2. OPTIONAL: category\n  && ($color == \"\"        || color == $color)                             // 3. OPTIONAL: color\n  && ($material == \"\"     || material == $material)                       // 4. OPTIONAL: material\n  && ($minPrice == 0      || price >= $minPrice)                          // 5. OPTIONAL: min price (0 = no limit)\n  && ($maxPrice == 0      || price <= $maxPrice)                          // 6. OPTIONAL: max price (0 = no limit)\n  && ($searchQuery == \"\"  || name match $searchQuery + \"*\" || description match $searchQuery + \"*\")  // 7. OPTIONAL: search\n  && ($inStock == false   || stock > 0)                                   // 8. OPTIONAL: in-stock only\n]               // 1. All optional filters still apply\n  | score(\n  boost(name match $searchQuery + \"*\", 3),        // Title = very important\n  boost(description match $searchQuery + \"*\", 1)  // Description = secondary\n)                      // 2. Compute relevance score\n                                            //    \u2192 title matches 3\xD7 stronger\n                                            //    \u2192 _score added automatically (runtime)\n  | order(_score desc, name asc)            // 3. Best score first \u2192 then A-Z on ties\n  {\n  _id,\n  name,\n  \"slug\": slug.current,\n  price,\n  \"images\": images[0...4]{           // 1. LIMIT: max 4 images (exclusive)\n    _key,                            // 2. Needed for React list rendering\n    asset->{ _id, url }              // 3. Dereference to get real image URL\n  },\n  category->{                        // 4. Expand category reference\n    _id, title, \"slug\": slug.current\n  },\n  material,\n  color,\n  stock\n}": FILTER_PRODUCTS_BY_RELEVANCE_QUERYResult;
+    "*[\n  _type == \"product\"\n  && _id in $ids                        // 1. Match any ID in array\n] {\n  _id, name, \"slug\": slug.current,\n  price,\n  \"image\": images[0]{ asset->{ _id, url }, hotspot },\n  stock                                 // 2. Critical for availability check\n}": PRODUCTS_BY_IDS_QUERYResult;
+    "*[\n  _type == \"product\"                    // 1. Base filter\n  && stock > 0                          // 2. Still available\n  && stock <= 5    // 3. Below threshold (e.g. 5)\n] | order(stock asc) {                  // 4. SORT: lowest stock first\n  _id, name, \"slug\": slug.current,\n  stock,\n  \"image\": images[0]{                   // 5. Only first image\n    asset->{ _id, url }\n  }\n}": LOW_STOCK_PRODUCTS_QUERYResult;
+    "*[\n  _type == \"product\"\n  && stock == 0                         // 1. Only out-of-stock\n] | order(name asc) {                   // 2. SORT: A-Z\n  _id, name, \"slug\": slug.current,\n  \"image\": images[0]{ asset->{ _id, url } }\n}": OUT_OF_STOCK_PRODUCTS_QUERYResult;
+    "*[\n  _type == \"product\"                    // 1. Base filter\n  && (                                  // 2. Broad search condition\n    $searchQuery == \"\"                  //   - no query = return all\n    || name match $searchQuery + \"*\"\n    || description match $searchQuery + \"*\"\n    || category->title match $searchQuery + \"*\"  // extra: category names\n  )\n  && ($categorySlug == \"\" || category->slug.current == $categorySlug)\n  && ($material == \"\" || material == $material)\n  && ($color == \"\" || color == $color)\n  && ($minPrice == 0 || price >= $minPrice)\n  && ($maxPrice == 0 || price <= $maxPrice)\n] | order(name asc) [0...20] {           // 3. SORT A-Z + limit to 20\n  _id, name, \"slug\": slug.current,\n  description, price,\n  \"image\": images[0]{ asset->{ _id, url } },\n  category->{ _id, title, \"slug\": slug.current },\n  material, color, dimensions,\n  stock, featured, assemblyRequired\n}": AI_SEARCH_PRODUCTS_QUERYResult;
     "count(*[_type == \"product\"])": PRODUCT_COUNT_QUERYResult;
     "count(*[_type == \"order\"])": ORDER_COUNT_QUERYResult;
     "math::sum(*[\n  _type == \"order\"\n  && status in [\"paid\", \"shipped\", \"delivered\"]\n].total)": TOTAL_REVENUE_QUERYResult;

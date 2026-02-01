@@ -1,0 +1,1 @@
+export { CategoryTiles } from "./CategoryTiles"
