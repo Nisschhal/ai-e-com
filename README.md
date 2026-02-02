@@ -87,3 +87,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 ```
 
 ```
+
+
+when to use?
+@container
+@client/sanity
