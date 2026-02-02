@@ -110,3 +110,4 @@ To get the local webhook: `stripe listen --forward-to localhost:3000/api/webhook
 - and then run again and copy `whsec_...` into env as STRIPE_WEBHOOK_SECRET
 - make sure to put api login in `{domain_url}/api/webhooks/stripe`
 - You will get `200` status if sucess.
+
