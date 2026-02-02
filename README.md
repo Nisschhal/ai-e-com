@@ -66,6 +66,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 }
 ```
 
+- you might need to install `@sanity/client` if not installed, for types.d.ts
+
 - When you run `pnpm typegen` or `npm run typegen`, Sanity looks at your Schemas (what the data should look like) and your GROQ Queries (what data you are asking for) and automatically writes a massive TypeScript file for you.
 - What really happens
   - `sanity schema extract`:
@@ -84,11 +86,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 - Follow instruction [Nexjs Shadcn](https://ui.shadcn.com/docs/installation/next)
 - Install `pnpm dlx shadcn@latest init`
 
-```
+## Adding Stripe
 
-```
+- Create Stripe account and project/business and get the STRIPE_SECRET_API_KEY into .env
+- install stripe: `pnpm add stripe` || `npm i stripe`
+- create stripe function like `stripe.customer.create()` and `stripe.checkout.sessions.create()` or get based on need
+  - use the `/lib/actions` for reference, fully explained and commented
+- also add `writeClient` in `/sanity/lib/client` for sanity doc/db mutation as during checkout product stock and user details need to update.
+- **Now if you check out it will create new customer in stripe business and link it/update in db with stripe id**
+- <i>But this will not create order in your db<i> Why? Because:
+  - CheckoutFunction only redirect user to Stripe portal and done.
+  - It doesn't wait for user to enter their details and get the payment.completed because that would be synchronous which stops server from doing other task.
+  - So we add sucess_url and cancel_url: if payment sucess stripe redirect to sucess_url else to cancel_url
+- Once the payment is sucess, stripe sends the `checkout.session.completed` event which trigger our webhook (if you set one) and that webhook trigger our `{domain_url}/api/webhooks/stripe`.
+  - once webhook sends the request it sends header with its secret to verify the request is what really coming from authorized source i.e, webhook
+  - then we write the lock to destrcture the even -> session -> check or even.type -> if success then update order and product quantity/stock.
 
+To get the local webhook: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
 
-when to use?
-@container
-@client/sanity
+- if its failed then you need to instal stripe cli `brew install stripe/stripe-cli/stripe`, which lets say local stripe server for webhook
+- once stripe download, login with stripe account - one time
+- or just `stripe listen --forward-to localhost:3000/api/webhooks/stripe` which gives opt in gmail and authorize it
+- and then run again and copy `whsec_...` into env as STRIPE_WEBHOOK_SECRET
+- make sure to put api login in `{domain_url}/api/webhooks/stripe`
+- You will get `200` status if sucess.
