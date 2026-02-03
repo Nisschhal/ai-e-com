@@ -11,6 +11,8 @@
     "typegen": "sanity schema extract && sanity typegen generate --enforce-required-false"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.20",
+    "@ai-sdk/react": "^3.0.70",
     "@base-ui/react": "^1.1.0",
     "@clerk/nextjs": "^6.37.1",
     "@hookform/resolvers": "^5.2.2",
@@ -44,6 +46,7 @@
     "@sanity/icons": "^3.7.4",
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "^4.22.0",
+    "ai": "^6.0.68",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -60,6 +63,7 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.5.7",
     "recharts": "2.15.4",
     "sanity": "^4.22.0",
