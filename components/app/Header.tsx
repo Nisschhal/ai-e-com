@@ -18,27 +18,14 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span
-            className="
-  inline-block text-2xl font-extrabold tracking-tight
-  bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent 
-  
-  drop-shadow-[0_2px_10px_rgba(16,185,129,0.2)]
-  
-  transition-all duration-500 ease-out
-  
-  hover:from-amber-500 hover:to-orange-500 
-  hover:drop-shadow-[0_2px_15px_rgba(245,158,11,0.4)]
-  hover:scale-105 transform cursor-pointer
-"
-          >
+          {/* FIXED: Removed newlines and extra spaces from className below */}
+          <span className="inline-block text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(16,185,129,0.2)] transition-all duration-500 ease-out hover:from-amber-500 hover:to-orange-500 hover:drop-shadow-[0_2px_15px_rgba(245,158,11,0.4)] hover:scale-105 transform cursor-pointer">
             NEST STORE
           </span>
         </Link>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* My Orders - Only when signed in */}
           <SignedIn>
             <Button asChild>
               <Link href="/orders" className="flex items-center gap-2">
@@ -48,7 +35,6 @@ export function Header() {
             </Button>
           </SignedIn>
 
-          {/* AI Shopping Assistant */}
           {!isChatOpen && (
             <Button
               onClick={openChat}
@@ -59,7 +45,6 @@ export function Header() {
             </Button>
           )}
 
-          {/* Cart Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -75,7 +60,6 @@ export function Header() {
             <span className="sr-only">Open cart ({totalItems} items)</span>
           </Button>
 
-          {/* User */}
           <SignedIn>
             <UserButton
               afterSwitchSessionUrl="/"

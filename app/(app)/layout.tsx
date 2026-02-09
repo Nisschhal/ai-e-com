@@ -1,3 +1,4 @@
+import { Footer } from "@/components/app/Footer"
 import { Header } from "@/components/app/Header"
 import { CartSheet } from "@/components/sheets/CartSheet"
 import { ChatSheet } from "@/components/sheets/ChatSheet"
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <ChatStoreProvider>
           <Header />
           <main>{children}</main>
+          <Footer />
           <SanityLive />
           <CartSheet />
           <ChatSheet />
