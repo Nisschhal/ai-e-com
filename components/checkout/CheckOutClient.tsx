@@ -2,7 +2,14 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, ShoppingBag, AlertTriangle, Loader2 } from "lucide-react"
+import {
+  ArrowLeft,
+  ShoppingBag,
+  AlertTriangle,
+  Loader2,
+  CreditCard,
+  Info,
+} from "lucide-react" // Added CreditCard and Info
 import { Button } from "@/components/ui/button"
 import { formatPrice } from "@/lib/utils"
 import {
@@ -199,6 +206,41 @@ export function CheckoutClient() {
             <p className="mt-4 text-center text-xs text-zinc-500 dark:text-zinc-400">
               You&apos;ll be redirected to Stripe&apos;s secure checkout
             </p>
+
+            {/* START: NEW TEST CREDENTIALS BOX */}
+            <div className="mt-8 rounded-lg border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
+              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300">
+                <Info className="h-4 w-4" />
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  Test Mode Details
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-400/80 leading-relaxed">
+                Use the following card details on the next page to simulate a
+                successful payment:
+              </p>
+              <div className="mt-3 space-y-1 font-mono text-sm text-blue-900 dark:text-blue-200">
+                <div className="flex justify-between">
+                  <span className="text-blue-700/60 dark:text-blue-400/50">
+                    Number:
+                  </span>
+                  <span className="font-bold">4242 4242 4242 4242</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700/60 dark:text-blue-400/50">
+                    Expiry:
+                  </span>
+                  <span className="font-bold">03 / 30</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700/60 dark:text-blue-400/50">
+                    CVC:
+                  </span>
+                  <span className="font-bold">123</span>
+                </div>
+              </div>
+            </div>
+            {/* END: NEW TEST CREDENTIALS BOX */}
           </div>
         </div>
       </div>

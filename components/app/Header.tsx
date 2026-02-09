@@ -18,8 +18,21 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-            The Furniture Store
+          <span
+            className="
+  inline-block text-2xl font-extrabold tracking-tight
+  bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent 
+  
+  drop-shadow-[0_2px_10px_rgba(16,185,129,0.2)]
+  
+  transition-all duration-500 ease-out
+  
+  hover:from-amber-500 hover:to-orange-500 
+  hover:drop-shadow-[0_2px_15px_rgba(245,158,11,0.4)]
+  hover:scale-105 transform cursor-pointer
+"
+          >
+            NEST STORE
           </span>
         </Link>
 
@@ -39,7 +52,7 @@ export function Header() {
           {!isChatOpen && (
             <Button
               onClick={openChat}
-              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-200/50 transition-all hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-300/50 dark:shadow-amber-900/30 dark:hover:shadow-amber-800/40"
+              className="gap-2 bg-gradient-to-r from-emerald-500 to-blue-500 text-white shadow-md shadow-emerald-200/50 transition-all duration-300 hover:from-amber-600 hover:to-orange-600 hover:shadow-lg hover:shadow-amber-300/50 dark:shadow-amber-900/30 dark:hover:shadow-amber-800/40"
             >
               <Sparkles className="h-4 w-4" />
               <span className="text-sm font-medium">Ask AI</span>
