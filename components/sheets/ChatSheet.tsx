@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useChat } from "@ai-sdk/react"
 import { useAuth } from "@clerk/nextjs"
-import { Sparkles, Send, Loader2, X, Bot } from "lucide-react"
+import { Sparkles, Send, Loader2, X, Bot, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -28,7 +28,8 @@ export function ChatSheet() {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status } = useChat()
+  const { messages, sendMessage, status, error, regenerate } = useChat()
+  console.log({ messages, status })
   const isLoading = status === "streaming" || status === "submitted"
 
   // Auto-scroll to bottom when new messages arrive or streaming updates
@@ -119,6 +120,47 @@ export function ChatSheet() {
                   </div>
                 )
               })}
+
+              {/* 👇 ERROR UI - NEW */}
+              {error && (
+                <div className="space-y-4 p-6 bg-red-50 border-2 border-red-200 rounded-3xl dark:bg-red-950/50 dark:border-red-800">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-900/50 mt-0.5">
+                      <AlertCircle className="w-6 h-6 text-red-600" />
+                    </div>
+
+                    <div className="flex-1 pt-0.5">
+                      <h3 className="font-semibold text-lg text-red-900 dark:text-red-100 mb-1">
+                        Something went wrong
+                      </h3>
+                      <p className="text-sm text-red-800 dark:text-red-300 leading-relaxed">
+                        {error.message?.includes("model")
+                          ? "Shopping assistant is temporarily unavailable. Please try again soon."
+                          : error.message ||
+                            "Chat service temporarily unavailable. Please try again."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4 border-t border-red-100 dark:border-red-900">
+                    <Button
+                      size="sm"
+                      onClick={() => regenerate()}
+                      className="bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm"
+                    >
+                      Try Again
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={closeChat}
+                      className="border-red-200 hover:bg-red-50"
+                    >
+                      Close Chat
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Loading indicator */}
               {isLoading && messages[messages.length - 1]?.role === "user" && (

@@ -210,7 +210,7 @@ export function createShoppingAgent({ userId }: ShoppingAgentOptions) {
     // 3. Replace gateway("anthropic/...") with google("gemini-1.5-flash")
     // Use 'gemini-1.5-flash' for the best free-tier experience (fast & high limits)
     // model: gateway("anthropic/claude-sonnet-4.5"),
-    model: google("gemini-2.5-flash-lite"),
+    model: google("gemini-2.5-flash"),
     instructions,
     tools,
   })
